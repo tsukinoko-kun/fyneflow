@@ -8,18 +8,19 @@ import (
 	"fyne.io/fyne/v2/data/binding"
 )
 
-type FlowItemGenerator[K comparable] func() fyne.CanvasObject
+type FlowItemGenerator func() fyne.CanvasObject
 
-type FlowItem[K comparable] struct {
-	generator FlowItemGenerator[K]
+type FlowItem struct {
+	generator FlowItemGenerator
 }
 
-type Flow[K comparable] struct {
+type Flow struct {
 	window  fyne.Window
 	flowMut sync.Mutex
-	current K
-	next    K
-	items   map[K]*FlowItem[K]
+	current string
+	next    string
+	signal  chan struct{}
+	items   map[string]*FlowItem
 
 	stateMut sync.Mutex
 	strState map[string]binding.String
@@ -32,18 +33,20 @@ type Flow[K comparable] struct {
 // The Flow is associated with the given fyne.Window.
 // Use the returned Flow to add FlowItems and to switch between them.
 // Use the Close method to close the Flow. This will not close the associated fyne.Window!
-func NewFlow[K comparable](w fyne.Window) *Flow[K] {
-	f := new(Flow[K])
+func NewFlow(w fyne.Window) *Flow {
+	f := new(Flow)
 	f.window = w
 	f.flowMut = sync.Mutex{}
-	f.items = make(map[K]*FlowItem[K])
+	f.items = make(map[string]*FlowItem)
+	f.signal = make(chan struct{}, 1)
 	go f.loop()
 	return f
 }
 
 // Close closes the Flow.
 // This will not close the associated fyne.Window!
-func (f *Flow[K]) Close() {
+func (f *Flow) Close() {
+	f.signal <- struct{}{}
 	f.flowMut.Lock()
 	defer f.flowMut.Unlock()
 
@@ -53,8 +56,9 @@ func (f *Flow[K]) Close() {
 	}
 }
 
-func (f *Flow[K]) loop() {
+func (f *Flow) loop() {
 	for !f.close {
+		<-f.signal
 		if f.next != f.current {
 			f.apply()
 		}
@@ -63,23 +67,24 @@ func (f *Flow[K]) loop() {
 
 // Set adds a FlowItem to the Flow.
 // If the key already exists, the FlowItem will be overwritten.
-func (f *Flow[K]) Set(key K, generator FlowItemGenerator[K]) *FlowItem[K] {
+func (f *Flow) Set(key string, generator FlowItemGenerator) *FlowItem {
 	f.flowMut.Lock()
 	defer f.flowMut.Unlock()
 
-	fi := new(FlowItem[K])
+	fi := new(FlowItem)
 	fi.generator = generator
 	apply := len(f.items) == 0
 	f.items[key] = fi
 	if apply {
 		f.next = key
 	}
+	f.signal <- struct{}{}
 	return fi
 }
 
 // GoTo sets the content of the window to the content of the FlowItem associated with the given key.
 // If the key is not found, an error is returned.
-func (f *Flow[K]) GoTo(key K) error {
+func (f *Flow) GoTo(key string) error {
 	f.flowMut.Lock()
 	defer f.flowMut.Unlock()
 
@@ -89,13 +94,14 @@ func (f *Flow[K]) GoTo(key K) error {
 
 	if _, ok := f.items[key]; ok {
 		f.next = key
+		f.signal <- struct{}{}
 		return nil
 	} else {
 		return errors.New("flow: key not found")
 	}
 }
 
-func (f *Flow[K]) apply() {
+func (f *Flow) apply() {
 	f.flowMut.Lock()
 	defer f.flowMut.Unlock()
 
@@ -111,7 +117,7 @@ func (f *Flow[K]) apply() {
 }
 
 // Current returns the key of the FlowItem that is currently displayed.
-func (f *Flow[K]) Current() K {
+func (f *Flow) Current() string {
 	f.flowMut.Lock()
 	defer f.flowMut.Unlock()
 
@@ -119,7 +125,7 @@ func (f *Flow[K]) Current() K {
 }
 
 // Next returns the key of the FlowItem that will be displayed next.
-func (f *Flow[K]) Next() K {
+func (f *Flow) Next() string {
 	f.flowMut.Lock()
 	defer f.flowMut.Unlock()
 
@@ -130,7 +136,7 @@ func (f *Flow[K]) Next() K {
 // If the key does not exist, a new binding.String is created with the given default value.
 // If the key does exist, the default value is ignored.
 // The returned binding.String is shared between all FlowItems of the Flow.
-func (f *Flow[K]) UseStateStr(key string, def string) binding.String {
+func (f *Flow) UseStateStr(key string, def string) binding.String {
 	f.stateMut.Lock()
 	defer f.stateMut.Unlock()
 
@@ -150,7 +156,7 @@ func (f *Flow[K]) UseStateStr(key string, def string) binding.String {
 // If the key does not exist, a new binding.Int is created with the given default value.
 // If the key does exist, the default value is ignored.
 // The returned binding.Int is shared between all FlowItems of the Flow.
-func (f *Flow[K]) UseStateInt(key string, def int) binding.Int {
+func (f *Flow) UseStateInt(key string, def int) binding.Int {
 	f.stateMut.Lock()
 	defer f.stateMut.Unlock()
 

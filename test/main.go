@@ -14,7 +14,7 @@ func main() {
 
 	// wrap the fyne.Window using a flow
 	// the generic type is the type for the flow keys
-	flow := fyneflow.NewFlow[string](window)
+	flow := fyneflow.NewFlow(window)
 	defer flow.Close()
 
 	// add an item to the flow with the key "a"
