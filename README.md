@@ -7,7 +7,7 @@ This library manages the content state of a `fyne.Window`
 ## Install
 
 ```bash
-go get github.com/Frank-Mayer/fyneflow
+go get -u github.com/tsukinoko-kun/fyneflow
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"github.com/Frank-Mayer/fyneflow"
+	"github.com/tsukinoko-kun/fyneflow"
 )
 
 func main() {
