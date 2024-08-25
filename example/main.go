@@ -23,7 +23,7 @@ func main() {
 	defer flow.Close()
 
 	// add an item to the flow with the key A
-	flow.Set(FlowKeyA, func() fyne.CanvasObject {
+	flow.Set(FlowKeyA, func(flow *fyneflow.Flow) fyne.CanvasObject {
 		// use flow shared data of key "txt"
 		return container.NewVBox(
 			widget.NewLabel("I am A"),
@@ -37,7 +37,7 @@ func main() {
 	})
 
 	// add an item to the flow with the key B
-	flow.Set(FlowKeyB, func() fyne.CanvasObject {
+	flow.Set(FlowKeyB, func(flow *fyneflow.Flow) fyne.CanvasObject {
 		// use flow shared data of key "txt"
 		return container.NewVBox(
 			widget.NewLabel("I am B"),

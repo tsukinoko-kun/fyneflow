@@ -5,13 +5,12 @@ import (
 	"math"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/data/binding"
 )
 
 type (
 	FlowKey int
 
-	FlowItemGenerator func() fyne.CanvasObject
+	FlowItemGenerator func(flow *Flow) fyne.CanvasObject
 
 	FlowItem struct {
 		generator FlowItemGenerator
@@ -23,8 +22,6 @@ type (
 		next    chan FlowKey
 		items   map[FlowKey]*FlowItem
 
-		strState map[string]binding.String
-		intState map[string]binding.Int
 		close    bool
 	}
 )
@@ -102,7 +99,7 @@ func (f *Flow) apply(next FlowKey) {
 		return
 	}
 
-	obj := fi.generator()
+	obj := fi.generator(f)
 
 	f.window.SetContent(obj)
 	f.current = next
